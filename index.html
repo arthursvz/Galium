@@ -1,0 +1,645 @@
+@@ -1,644 +0,0 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Interactif | IDS & IPS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Cool Gray -->
+    <!-- Application Structure Plan: L'application est structurée en cinq sections logiques accessibles via une navigation fixe : 1. Fondamentaux pour introduire les concepts de base. 2. Comparaison pour distinguer clairement IDS et IPS via un tableau interactif. 3. Méthodes pour détailler les approches de détection avec des cartes et un graphique d'anomalie. 4. État de l'Art pour présenter les technologies modernes avec un graphique d'évolution. 5. Systèmes Embarqués pour aborder les spécificités de ce domaine avec des visuels sur les contraintes et un sélecteur de modèles. Cette structure thématique, plutôt que linéaire, favorise une exploration non-séquentielle et une compréhension progressive, partant du général pour aller au plus spécifique. L'utilisateur peut ainsi se concentrer sur les domaines qui l'intéressent le plus. -->
+    <!-- Visualization & Content Choices: 
+        - Rapport Info: Principes de base IDS/IPS -> Goal: Informer -> Viz/Method: Diagrammes HTML/CSS (Placement réseau), Cartes d'information. Interaction: Aucune, clarté visuelle. Justification: Représentation simple et efficace des concepts fondamentaux. Library: HTML/Tailwind.
+        - Rapport Info: Différences IDS vs. IPS -> Goal: Comparer -> Viz/Method: Tableau comparatif structuré. Interaction: Onglets pour basculer entre les types de systèmes. Justification: Permet une comparaison directe et claire des caractéristiques clés. Library: JS pour les onglets.
+        - Rapport Info: Méthodes de détection -> Goal: Organiser/Expliquer -> Viz/Method: Graphique de ligne Chart.js pour visualiser une anomalie. Interaction: Tooltip sur le graphique pour afficher les détails. Justification: Une visualisation d'anomalie est plus parlante qu'un long texte. Library: Chart.js.
+        - Rapport Info: Évolution des technologies -> Goal: Montrer le changement -> Viz/Method: Graphique à barres Chart.js. Interaction: Hover pour afficher les taux de précision. Justification: Illustre de manière concise les progrès apportés par l'IA/ML. Library: Chart.js.
+        - Rapport Info: Modèles embarquables -> Goal: Comparer/Informer -> Viz/Method: Sélecteur interactif (boutons + zone de texte). Interaction: Clic sur un bouton pour afficher les détails du modèle. Justification: Présente des informations complexes de manière progressive et sans surcharger l'interface. Library: JS.
+        - Rapport Info: Étude de cas embarquée générée par LLM -> Goal: Engagement/Explication Pratique -> Viz/Method: Zone de texte avec input. Interaction: Bouton déclenche l'appel LLM. Justification: Fournit des exemples concrets et dynamiques. Library: Gemini API (JS Fetch).
+        - Rapport Info: Prédiction de menaces par LLM -> Goal: Information prospective -> Viz/Method: Zone de texte. Interaction: Bouton déclenche l'appel LLM. Justification: Offre une vision futuriste basée sur l'IA. Library: Gemini API (JS Fetch).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s;
+        }
+        .nav-link:hover {
+            color: #3b82f6;
+        }
+        .active-nav {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .active-tab {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .inactive-tab {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+        .llm-button {
+            @apply flex items-center justify-center bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 transition duration-300 ease-in-out transform hover:scale-105 mt-6;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255,255,255,.2);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-slate-800">IDS / IPS</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#fondamentaux" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Fondamentaux</a>
+                        <a href="#comparaison" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Comparaison</a>
+                        <a href="#methodes" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Méthodes</a>
+                        <a href="#etat-art" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">État de l'Art</a>
+                        <a href="#embarque" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-700">Systèmes Embarqués</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="fondamentaux" class="py-16 sm:py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">Les Fondamentaux de la Détection d'Intrusion</h2>
+                    <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">Cette section introduit les concepts de base des systèmes de détection (IDS) et de prévention (IPS) d'intrusion. Vous découvrirez leur rôle essentiel dans la cybersécurité moderne, comment ils se positionnent dans une architecture réseau et le principe fondamental qu'ils protègent : la triade CIA (Confidentialité, Intégrité, Disponibilité).</p>
+                </div>
+
+                <div class="mt-12 grid gap-8 md:grid-cols-2 lg:gap-12">
+                    <div class="p-8 bg-white rounded-2xl shadow-md">
+                        <h3 class="text-2xl font-bold text-slate-800">Qu'est-ce qu'un IDS ? <span class="text-2xl ml-2">🚨</span></h3>
+                        <p class="mt-4 text-slate-600"><strong class="font-semibold text-slate-700">Système de Détection d'Intrusion (Intrusion Detection System)</strong>. C'est un dispositif passif qui surveille le trafic réseau ou les activités d'un système. Son rôle est de détecter les activités suspectes ou les violations de politique de sécurité et de générer des alertes. L'IDS n'intervient pas pour bloquer l'attaque.</p>
+                        <p class="mt-3 text-slate-600"><strong class="font-semibold text-slate-700">Analogie :</strong> C'est comme une alarme anti-cambriolage. Elle sonne pour vous avertir d'une effraction, mais n'empêche pas le voleur d'entrer.</p>
+                    </div>
+                    <div class="p-8 bg-white rounded-2xl shadow-md">
+                        <h3 class="text-2xl font-bold text-slate-800">Qu'est-ce qu'un IPS ? <span class="text-2xl ml-2">🛡️</span></h3>
+                        <p class="mt-4 text-slate-600"><strong class="font-semibold text-slate-700">Système de Prévention d'Intrusion (Intrusion Prevention System)</strong>. C'est un dispositif actif. Comme un IDS, il surveille et détecte les menaces, mais il est également capable de prendre des mesures pour les bloquer en temps réel. Il est placé "en ligne" sur le chemin du trafic.</p>
+                        <p class="mt-3 text-slate-600"><strong class="font-semibold text-slate-700">Analogie :</strong> C'est un agent de sécurité à la porte. Il identifie la menace et l'empêche activement d'entrer dans le bâtiment.</p>
+                    </div>
+                </div>
+
+                <div class="mt-16 text-center">
+                     <h3 class="text-2xl font-bold text-slate-800 mb-8">Positionnement dans le Réseau</h3>
+                     <div class="bg-white p-6 rounded-2xl shadow-md max-w-4xl mx-auto">
+                        <div class="flex flex-col items-center space-y-4">
+                           <div class="text-2xl font-bold">🌐 Internet</div>
+                           <div class="h-6 w-1 bg-slate-300"></div>
+                           <div class="bg-red-100 text-red-800 px-4 py-2 rounded-full font-semibold">🔥 Pare-feu</div>
+                           <div class="h-6 w-1 bg-slate-300"></div>
+                           <div class="w-full border-t border-slate-300 my-2"></div>
+                           <div class="relative w-full flex justify-center items-start pt-6">
+                               <div class="absolute -top-3 bg-white px-2 text-slate-500 font-medium">Flux de trafic</div>
+                               <div class="w-full h-1 bg-slate-300"></div>
+                               <div class="absolute -right-2 top-3 text-3xl">➡️</div>
+                           </div>
+                            <div class="flex justify-around w-full mt-4 items-start">
+                                <div class="flex flex-col items-center">
+                                    <h4 class="font-bold text-lg mb-2">IPS (En ligne)</h4>
+                                    <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-semibold">🛡️ IPS</div>
+                                    <div class="h-6 w-1 bg-slate-300 mt-2"></div>
+                                    <div class="bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-semibold mt-2">💻 Serveur</div>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <h4 class="font-bold text-lg mb-2">IDS (Hors bande)</h4>
+                                    <div class="relative">
+                                        <div class="h-6 w-1 bg-slate-300 transform -rotate-45 absolute -top-1 -left-4"></div>
+                                        <div class="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-semibold">🚨 IDS</div>
+                                    </div>
+                                    <p class="text-sm text-slate-500 mt-2">(Port miroir)</p>
+                                </div>
+                            </div>
+                     </div>
+                     <p class="mt-4 text-slate-600 max-w-3xl mx-auto">L'IPS se place directement sur le chemin du trafic pour le filtrer (en ligne), tandis que l'IDS analyse une copie du trafic (hors bande) sans affecter la latence.</p>
+                 </div>
+            </div>
+        </section>
+
+        <section id="comparaison" class="py-16 sm:py-20 bg-slate-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">IDS vs. IPS : La Confrontation</h2>
+                    <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">Bien que leurs noms soient similaires, les IDS et IPS ont des rôles, des positionnements et des impacts très différents sur la sécurité d'un réseau. Cette section propose une comparaison directe pour vous aider à saisir leurs distinctions clés. Utilisez les onglets pour basculer entre les deux systèmes et comparer leurs caractéristiques point par point.</p>
+                </div>
+                
+                <div class="mt-12 max-w-4xl mx-auto">
+                    <div class="flex justify-center mb-6">
+                        <button id="show-ids" class="tab-button text-lg font-semibold py-3 px-8 rounded-l-lg active-tab">IDS 🚨</button>
+                        <button id="show-ips" class="tab-button text-lg font-semibold py-3 px-8 rounded-r-lg inactive-tab">IPS 🛡️</button>
+                    </div>
+
+                    <div id="comparison-content" class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="methodes" class="py-16 sm:py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">Les Méthodes de Détection</h2>
+                    <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">Un IDS/IPS peut utiliser plusieurs techniques pour identifier une menace. Chaque méthode a ses forces et ses faiblesses, et les systèmes modernes les combinent souvent pour une efficacité maximale. Explorez ici les approches principales, de la comparaison de signatures connues à la détection de comportements anormaux.</p>
+                </div>
+
+                <div class="mt-12 grid gap-8 md:grid-cols-2">
+                    <div class="p-6 bg-white rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold text-slate-800">🔎 Détection par Signature</h3>
+                        <p class="mt-3 text-slate-600">Compare le trafic à une base de données de signatures d'attaques connues (comme un antivirus). C'est très efficace contre les menaces répertoriées.</p>
+                        <p class="mt-2 text-sm"><strong class="text-green-600">Avantage :</strong> Très faible taux de faux positifs.</p>
+                        <p class="mt-1 text-sm"><strong class="text-red-600">Inconvénient :</strong> Incapable de détecter les attaques nouvelles ou inconnues (zero-day).</p>
+                    </div>
+                    <div class="p-6 bg-white rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold text-slate-800">📈 Détection par Anomalie</h3>
+                        <p class="mt-3 text-slate-600">Crée un modèle de référence du comportement "normal" du réseau. Toute déviation significative par rapport à ce modèle est signalée comme une potentielle menace.</p>
+                        <p class="mt-2 text-sm"><strong class="text-green-600">Avantage :</strong> Peut détecter les attaques zero-day.</p>
+                        <p class="mt-1 text-sm"><strong class="text-red-600">Inconvénient :</strong> Peut générer plus de faux positifs ; un trafic légitime mais inhabituel peut être signalé.</p>
+                    </div>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="text-2xl font-bold text-center text-slate-800">Visualisation d'une Anomalie</h3>
+                    <p class="text-center mt-2 text-slate-600 max-w-2xl mx-auto">Ce graphique illustre comment la détection par anomalie fonctionne. Le système apprend le trafic normal (la ligne de base) et déclenche une alerte lorsqu'une activité inhabituelle (le pic) est détectée.</p>
+                    <div class="mt-8 chart-container">
+                        <canvas id="anomalyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="etat-art" class="py-16 sm:py-20 bg-slate-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">État de l'Art et Technologies Modernes</h2>
+                     <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">Le domaine des IDS/IPS est en constante évolution pour contrer des menaces toujours plus sophistiquées. Cette section explore les avancées majeures, notamment l'intégration de l'intelligence artificielle et du machine learning, qui ont radicalement amélioré la précision et les capacités de détection.</p>
+                </div>
+                
+                <div class="mt-12 grid md:grid-cols-2 gap-8 items-center">
+                     <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow">
+                           <h4 class="font-bold text-lg text-blue-600">NGIPS & Conscience Applicative</h4>
+                           <p class="text-slate-600 mt-1">Les Systèmes de Prévention d'Intrusion de Nouvelle Génération (NGIPS) comprennent le contexte des applications (qui utilise quelle application) pour prendre des décisions plus intelligentes.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow">
+                           <h4 class="font-bold text-lg text-blue-600">Intégration du Threat Intelligence</h4>
+                           <p class="text-slate-600 mt-1">Les systèmes modernes s'abonnent à des flux de renseignements sur les menaces en temps réel pour mettre à jour instantanément leurs connaissances sur les nouvelles attaques, adresses IP malveillantes, etc.</p>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow">
+                           <h4 class="font-bold text-lg text-blue-600">IDS/IPS dans le Cloud</h4>
+                           <p class="text-slate-600 mt-1">Solutions natives au cloud qui s'adaptent dynamiquement aux environnements virtualisés et conteneurisés, offrant une protection élastique.</p>
+                        </div>
+                        <button id="predictThreatsBtn" class="llm-button">
+                            <span>Prédire les Prochaines Menaces ✨</span>
+                            <div id="predictThreatsSpinner" class="loading-spinner ml-2 hidden"></div>
+                        </button>
+                        <div id="predictedThreatsOutput" class="bg-white p-6 rounded-xl shadow mt-4 text-slate-700 min-h-[100px]">
+                            <p>Cliquez sur le bouton pour obtenir des prédictions sur les menaces futures.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-center text-slate-800 mb-4">L'Impact du Machine Learning</h3>
+                        <p class="text-center text-slate-600 mb-6">L'intégration de l'IA et du Machine Learning a permis un bond significatif dans l'efficacité de la détection, en particulier pour les anomalies complexes.</p>
+                        <div class="chart-container h-96">
+                             <canvas id="mlImpactChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="embarque" class="py-16 sm:py-20">
+             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">Focus : Systèmes Embarqués</h2>
+                    <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">Intégrer un IDS/IPS dans des systèmes embarqués (IoT, automobile, etc.) représente un défi majeur en raison des ressources limitées. Cette section se penche sur l'état de l'art, les modèles adaptés et les axes de recherche actuels pour sécuriser ces environnements contraints.</p>
+                </div>
+
+                <div class="mt-12 bg-white p-8 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-bold text-slate-800 text-center">Les Contraintes de l'Embarqué</h3>
+                    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+                        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                            <div class="text-4xl">⚡</div>
+                            <h4 class="font-bold mt-2">Consommation Énergétique</h4>
+                            <p class="text-sm text-slate-600">Les appareils sur batterie nécessitent des algorithmes très peu énergivores.</p>
+                        </div>
+                        <div class="p-4 bg-sky-50 rounded-lg border border-sky-200">
+                            <div class="text-4xl">🧠</div>
+                            <h4 class="font-bold mt-2">Puissance de Calcul (CPU)</h4>
+                            <p class="text-sm text-slate-600">Les processeurs ont une capacité limitée, ce qui exclut les modèles trop complexes.</p>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div class="text-4xl">💾</div>
+                            <h4 class="font-bold mt-2">Mémoire (RAM & Stockage)</h4>
+                            <p class="text-sm text-slate-600">L'espace pour le modèle et les données d'exécution est très restreint.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 grid lg:grid-cols-2 gap-12 items-start">
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-6 text-center">État de l'Art & Modèles Adaptés</h3>
+                        <p class="text-center text-slate-600 mb-6">Cliquez sur un type de modèle pour voir ses caractéristiques pour l'embarqué.</p>
+                        <div class="flex flex-wrap justify-center gap-3 mb-6">
+                            <button class="model-btn py-2 px-4 bg-slate-200 rounded-lg font-semibold transition hover:bg-slate-300">Arbres de Décision</button>
+                            <button class="model-btn py-2 px-4 bg-slate-200 rounded-lg font-semibold transition hover:bg-slate-300">SVM</button>
+                            <button class="model-btn py-2 px-4 bg-slate-200 rounded-lg font-semibold transition hover:bg-slate-300">TinyML / DNN Légers</button>
+                        </div>
+                        <div id="model-details" class="p-6 bg-slate-50 rounded-lg min-h-[180px]">
+                            <p class="text-slate-500 italic">Sélectionnez un modèle pour afficher les détails ici.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-2xl shadow-lg">
+                        <h3 class="text-2xl font-bold text-slate-800 mb-6 text-center">Axes de Recherche Actuels</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-lg text-blue-700">Apprentissage Fédéré (Federated Learning)</h4>
+                                <p class="text-slate-600">Entraîner un modèle global sur de multiples appareils sans jamais centraliser leurs données brutes, préservant ainsi la confidentialité. Idéal pour l'IoT.</p>
+                            </div>
+                            <hr>
+                             <div>
+                                <h4 class="font-semibold text-lg text-blue-700">Auto-apprentissage sur Appareil (On-device Learning)</h4>
+                                <p class="text-slate-600">Permettre aux systèmes de s'adapter aux changements de leur environnement local sans nécessiter de ré-entraînement centralisé constant.</p>
+                            </div>
+                            <hr>
+                             <div>
+                                <h4 class="font-semibold text-lg text-blue-700">Accélération Matérielle</h4>
+                                <p class="text-slate-600">Utilisation de puces spécialisées (FPGA, TPU) pour exécuter des inférences de modèles IA de manière rapide et économe en énergie.</p>
+                            </div>
+                        </div>
+                        <div class="mt-8">
+                            <h3 class="text-2xl font-bold text-slate-800 mb-4 text-center">Générer une Étude de Cas d'Intrusion Embarquée ✨</h3>
+                            <p class="text-center text-slate-600 mb-4">Décrivez un type d'appareil (ex: montre connectée, voiture autonome) et laissez l'IA créer un scénario.</p>
+                            <input type="text" id="deviceInput" placeholder="Ex: capteur industriel" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-slate-700">
+                            <button id="generateCaseStudyBtn" class="llm-button w-full">
+                                <span>Générer l'étude de cas ✨</span>
+                                <div id="caseStudySpinner" class="loading-spinner ml-2 hidden"></div>
+                            </button>
+                            <div id="caseStudyOutput" class="bg-slate-50 p-6 rounded-lg mt-4 text-slate-700 min-h-[150px]">
+                                <p>L'étude de cas générée apparaîtra ici.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </section>
+    </main>
+    
+    <footer class="bg-slate-800 mt-20">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-slate-400">Rapport interactif sur les systèmes IDS/IPS. Conçu pour une exploration intuitive.</p>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Corrected way to access potentially global variables, avoiding ReferenceError
+    const appId = (typeof window.__app_id !== 'undefined') ? window.__app_id : 'default-app-id';
+    const firebaseConfig = (typeof window.__firebase_config !== 'undefined') ? JSON.parse(window.__firebase_config) : {};
+    const initialAuthToken = (typeof window.__initial_auth_token !== 'undefined') ? window.__initial_auth_token : null;
+
+    const comparisonContent = {
+        ids: {
+            title: 'IDS : Le Détective 🚨',
+            content: [
+                { label: 'Rôle', value: 'Passif : Détecte et alerte.' },
+                { label: 'Positionnement', value: 'Hors bande (out-of-band). Reçoit une copie du trafic.' },
+                { label: 'Impact Réseau', value: 'Nul. N\'ajoute pas de latence au trafic principal.' },
+                { label: 'Réponse à la menace', value: 'Aucune action de blocage directe. Repose sur un administrateur ou un autre système pour agir.' },
+                { label: 'Impact Faux Positif', value: 'Génère une alerte inutile ("bruit"). Peut fatiguer les équipes de sécurité.' },
+            ]
+        },
+        ips: {
+            title: 'IPS : Le Gardien 🛡️',
+            content: [
+                { label: 'Rôle', value: 'Actif : Détecte, alerte et bloque la menace.' },
+                { label: 'Positionnement', value: 'En ligne (in-line). Le trafic passe à travers l\'IPS.' },
+                { label: 'Impact Réseau', value: 'Introduit une légère latence. Peut devenir un point de défaillance unique (SPOF).' },
+                { label: 'Réponse à la menace', value: 'Bloque le paquet malveillant, termine la session ou bloque l\'adresse IP source.' },
+                { label: 'Impact Faux Positif', value: 'Grave. Peut bloquer du trafic légitime, causant une interruption de service.' },
+            ]
+        }
+    };
+
+    const modelDetailsData = {
+        "Arbres de Décision": {
+            title: "Arbres de Décision / Forêts Aléatoires",
+            pros: "Très rapides à l'inférence, faciles à interpréter et peu gourmands en RAM. Excellent choix pour les tâches de classification sur des CPU contraints.",
+            cons: "Peuvent devenir complexes et lourds en mémoire si les arbres sont très profonds. Moins performants que les réseaux de neurones sur des données très complexes (images, sons)."
+        },
+        "SVM": {
+            title: "Machines à Vecteurs de Support (SVM)",
+            pros: "Efficaces en termes de mémoire car ils n'utilisent qu'un sous-ensemble de points d'entraînement (les vecteurs de support). Bons pour la classification binaire claire.",
+            cons: "Le temps d'entraînement peut être long sur de grands jeux de données. Le choix du bon noyau et des bons paramètres est crucial et pas toujours intuitif."
+        },
+        "TinyML / DNN Légers": {
+            title: "TinyML / Réseaux de Neurones Profonds (DNN) Légers",
+            pros: "Capacité à modéliser des relations très complexes. Des architectures comme MobileNet ou des techniques de quantification/pruning permettent de les exécuter sur des microcontrôleurs.",
+            cons: "Restent les plus gourmands en CPU et en énergie, même dans leurs versions légères. Le développement et l'optimisation sont plus complexes."
+        }
+    };
+
+    function renderComparison(type) {
+        const data = comparisonContent[type];
+        const container = document.getElementById('comparison-content');
+        let html = `<div class="p-8">
+                        <h3 class="text-2xl font-bold text-center text-slate-800 mb-6">${data.title}</h3>
+                        <ul class="space-y-4">`;
+        data.content.forEach(item => {
+            html += `<li class="flex flex-col sm:flex-row">
+                        <strong class="w-full sm:w-1/3 font-semibold text-slate-700">${item.label}</strong>
+                        <span class="w-full sm:w-2/3 text-slate-600">${item.value}</span>
+                     </li>`;
+        });
+        html += `</ul></div>`;
+        container.innerHTML = html;
+    }
+
+    const idsButton = document.getElementById('show-ids');
+    const ipsButton = document.getElementById('show-ips');
+
+    idsButton.addEventListener('click', () => {
+        renderComparison('ids');
+        idsButton.classList.replace('inactive-tab', 'active-tab');
+        ipsButton.classList.replace('active-tab', 'inactive-tab');
+    });
+
+    ipsButton.addEventListener('click', () => {
+        renderComparison('ips');
+        ipsButton.classList.replace('inactive-tab', 'active-tab');
+        idsButton.classList.replace('active-tab', 'inactive-tab');
+    });
+
+    renderComparison('ids');
+
+    const anomalyCtx = document.getElementById('anomalyChart').getContext('2d');
+    new Chart(anomalyCtx, {
+        type: 'line',
+        data: {
+            labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25', '10:30', '10:35'],
+            datasets: [{
+                label: 'Trafic Réseau (paquets/s)',
+                data: [120, 130, 125, 140, 135, 850, 150, 145],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.3
+            }, {
+                label: 'Ligne de base normale',
+                data: [150, 150, 150, 150, 150, 150, 150, 150],
+                borderColor: '#f59e0b',
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y;
+                            }
+                            if (context.dataIndex === 5) {
+                                return label + ' - ANOMALIE DÉTECTÉE';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Paquets par seconde'
+                    }
+                }
+            }
+        }
+    });
+    
+    const mlImpactCtx = document.getElementById('mlImpactChart').getContext('2d');
+    new Chart(mlImpactCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Basé Signature', 'Basé Anomalie (Statistique)', 'Machine Learning', 'Deep Learning'],
+            datasets: [{
+                label: 'Taux de détection des nouvelles menaces',
+                data: [5, 55, 85, 95],
+                backgroundColor: [
+                    'rgba(100, 116, 139, 0.6)',
+                    'rgba(251, 146, 60, 0.6)',
+                    'rgba(59, 130, 246, 0.6)',
+                    'rgba(22, 163, 74, 0.6)',
+                ],
+                borderColor: [
+                    'rgb(100, 116, 139)',
+                    'rgb(251, 146, 60)',
+                    'rgb(59, 130, 246)',
+                    'rgb(22, 163, 74)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Précision (%)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    const modelBtns = document.querySelectorAll('.model-btn');
+    const modelDetailsContainer = document.getElementById('model-details');
+    modelBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modelName = btn.textContent;
+            const details = modelDetailsData[modelName];
+            modelDetailsContainer.innerHTML = `
+                <h4 class="font-bold text-lg text-slate-800">${details.title}</h4>
+                <p class="mt-2"><strong class="text-green-600">Avantages :</strong> <span class="text-slate-600">${details.pros}</span></p>
+                <p class="mt-2"><strong class="text-red-600">Inconvénients :</strong> <span class="text-slate-600">${details.cons}</span></p>
+            `;
+            modelBtns.forEach(b => b.classList.remove('bg-blue-500', 'text-white'));
+            btn.classList.add('bg-blue-500', 'text-white');
+        });
+    });
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('main section');
+
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (pageYOffset >= sectionTop - 80) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active-nav');
+            if (link.getAttribute('href').includes(current)) {
+                link.classList.add('active-nav');
+            }
+        });
+    });
+
+    // LLM Integration
+    const generateCaseStudyBtn = document.getElementById('generateCaseStudyBtn');
+    const deviceInput = document.getElementById('deviceInput');
+    const caseStudyOutput = document.getElementById('caseStudyOutput');
+    const caseStudySpinner = document.getElementById('caseStudySpinner');
+
+    generateCaseStudyBtn.addEventListener('click', async () => {
+        const deviceType = deviceInput.value.trim();
+        if (!deviceType) {
+            caseStudyOutput.innerHTML = '<p class="text-red-500">Veuillez saisir un type d\'appareil.</p>';
+            return;
+        }
+
+        caseStudyOutput.innerHTML = '<p class="text-slate-500">Génération de l\'étude de cas en cours...</p>';
+        caseStudySpinner.classList.remove('hidden');
+        generateCaseStudyBtn.disabled = true;
+
+        const prompt = `Génère une brève étude de cas (environ 150 mots) d'une intrusion cybernétique sur un système embarqué de type "${deviceType}". Décris l'appareil, le type d'attaque, comment elle s'est déroulée et l'impact. Utilise un langage clair et éducatif.`;
+        
+        let chatHistory = [];
+        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+        const payload = { contents: chatHistory };
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                caseStudyOutput.innerHTML = `<p class="text-slate-700">${text}</p>`;
+            } else {
+                caseStudyOutput.innerHTML = '<p class="text-red-500">Erreur lors de la génération de l\'étude de cas. Veuillez réessayer.</p>';
+            }
+        } catch (error) {
+            console.error('Erreur lors de l\'appel à l\'API Gemini:', error);
+            caseStudyOutput.innerHTML = '<p class="text-red-500">Erreur de connexion ou du serveur. Veuillez réessayer plus tard.</p>';
+        } finally {
+            caseStudySpinner.classList.add('hidden');
+            generateCaseStudyBtn.disabled = false;
+        }
+    });
+
+    const predictThreatsBtn = document.getElementById('predictThreatsBtn');
+    const predictedThreatsOutput = document.getElementById('predictedThreatsOutput');
+    const predictThreatsSpinner = document.getElementById('predictThreatsSpinner');
+
+    predictThreatsBtn.addEventListener('click', async () => {
+        predictedThreatsOutput.innerHTML = '<p class="text-slate-500">Prédiction des menaces en cours...</p>';
+        predictThreatsSpinner.classList.remove('hidden');
+        predictThreatsBtn.disabled = true;
+
+        const prompt = "En te basant sur les tendances actuelles en cybersécurité et l'évolution des IDS/IPS, quelles sont les 3 à 5 prochaines menaces cybernétiques majeures à surveiller et pourquoi ? Sois concis et utilise des puces (tirets ou astérisques).";
+        
+        let chatHistory = [];
+        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+        const payload = { contents: chatHistory };
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.candidates && result.candidates.length > 0 &&
+                result.candidates[0].content && result.candidates[0].content.parts &&
+                result.candidates[0].content.parts.length > 0) {
+                const text = result.candidates[0].content.parts[0].text;
+                predictedThreatsOutput.innerHTML = `<div class="text-slate-700">${text.replace(/\*/g, '• ')}</div>`; // Replace asterisks with bullet points for better rendering
+            } else {
+                predictedThreatsOutput.innerHTML = '<p class="text-red-500">Erreur lors de la prédiction des menaces. Veuillez réessayer.</p>';
+            }
+        } catch (error) {
+            console.error('Erreur lors de l\'appel à l\'API Gemini:', error);
+            predictedThreatsOutput.innerHTML = '<p class="text-red-500">Erreur de connexion ou du serveur. Veuillez réessayer plus tard.</p>';
+        } finally {
+            predictThreatsSpinner.classList.add('hidden');
+            predictThreatsBtn.disabled = false;
+        }
+    });
+});
+</script>
+</body>
+</html>
